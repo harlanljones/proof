@@ -1,0 +1,32 @@
+[project]
+name = "proof"
+version = "0.1.0"
+description = "PROOF: Probabilistic Rest-Of-season Objective Forecasts — an empirical-Bayes MLB projection system"
+authors = [
+    { name = "Harlan Jones", email = "harlanljones@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.3",
+    "pandas>=3.0.6",
+    "pyarrow>=25.0.1",
+    "pybaseball>=2.2.7",
+    "scipy>=1.18.1",
+    "streamlit>=1.64.0",
+]
+
+# Not an installable package: modules run from the repo root via `uv run python -m ...`
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.14.0",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# "as of yesterday, local" is the product intent for a live dashboard
+"app/projections.py" = ["DTZ011"]
+"dashboard.py" = ["DTZ011"]

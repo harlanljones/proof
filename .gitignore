@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# data/snapshots/ IS tracked: pinned datasets are what make `make backtest`
+# reproducible offline. ~1.4 MB of parquet.
+
+# Regenerable daily pulls (make ingest); snapshots/ stays tracked.
+data/live/
+
+# Local secrets / runtime state
+.env
+.streamlit/secrets.toml
