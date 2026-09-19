@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PROOF — rest-of-season projections</title>
+  <meta name="description" content="PROOF: Probabilistic Rest-Of-season Objective Forecasts — an empirical-Bayes MLB projection system." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>⚾</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+</head>
+<body x-data="dashboard()" x-init="init()">
+  <header>
+    <h1>PROOF: Probabilistic Rest-Of-season Objective Forecasts</h1>
+    <p class="caption">
+      Projections through <span x-text="asOfLabel"></span>. Empirical-Bayes blend of a
+      2023&ndash;25 Marcel prior with season-to-date performance, per-component
+      shrinkage. Backtested 2023&ndash;25: beats naive extrapolation ~29% (hitters)
+      and ~19% (pitchers) on weighted RMSE; 80% intervals cover ~80%.
+      Methodology and honest failure modes: <code>writeup/</code> in the repo.
+    </p>
+  </header>
+
+  <aside class="sidebar">
+    <label>
+      Min YTD PA (hitters)
+      <input type="range" min="10" max="400" step="10" x-model.number="minPA" />
+      <span x-text="minPA"></span>
+    </label>
+    <label>
+      Min YTD BF (pitchers)
+      <input type="range" min="10" max="700" step="10" x-model.number="minBF" />
+      <span x-text="minBF"></span>
+    </label>
+    <label>
+      Player search
+      <input type="text" placeholder="Search players…" x-model.debounce="search" />
+    </label>
+  </aside>
+
+  <nav class="tabs" role="tablist">
+    <button :class="{active: tab === 'hitters'}" @click="tab = 'hitters'">Hitters</button>
+    <button :class="{active: tab === 'pitchers'}" @click="tab = 'pitchers'">Pitchers</button>
+    <button :class="{active: tab === 'about'}" @click="tab = 'about'">About</button>
+  </nav>
+
+  <main>
+    <section x-show="tab === 'hitters'" x-cloak>
+      <h2>Rest-of-season wOBA</h2>
+      <div class="layout">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <template x-for="c in hitterCols" :key="c.key">
+                  <th @click="sortHitters(c.key)" :class="{sorted: hitterSort.key === c.key}">
+                    <span x-text="c.label"></span>
+                    <span class="arrow" x-show="hitterSort.key === c.key" x-text="hitterSort.dir === 'asc' ? '▲' : '▼'"></span>
+                  </th>
+                </template>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="r in filteredHitters" :key="r.mlbID">
+                <tr>
+                  <td x-text="r.Name"></td>
+                  <td x-text="r.Tm"></td>
+                  <td class="num" x-text="r.Age"></td>
+                  <td class="num" x-text="r.PA_ytd"></td>
+                  <td class="num" x-text="fmt3(r.pred_woba_prior)"></td>
+                  <td class="num" x-text="fmt3(r.pred_woba_proof)"></td>
+                  <td class="num" x-text="fmt3(r.lo80)"></td>
+                  <td class="num" x-text="fmt3(r.hi80)"></td>
+                  <td class="num" x-text="fmtDelta3(r.delta)"></td>
+                  <td class="num" x-text="fmtPct(r['BB%'])"></td>
+                  <td class="num" x-text="fmtPct(r['K%'])"></td>
+                  <td class="num" x-text="fmt3(r.ISO)"></td>
+                  <td class="num" x-text="fmt3(r.BABIP)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-wrap">
+          <div id="hittersChart"></div>
+          <p class="caption">
+            &Delta; = current true-talent estimate minus the March projection.
+            Rookies and no-history players carry a league-average prior.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section x-show="tab === 'pitchers'" x-cloak>
+      <h2>Rest-of-season FIP / ERA</h2>
+      <div class="layout">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <template x-for="c in pitcherCols" :key="c.key">
+                  <th @click="sortPitchers(c.key)" :class="{sorted: pitcherSort.key === c.key}">
+                    <span x-text="c.label"></span>
+                    <span class="arrow" x-show="pitcherSort.key === c.key" x-text="pitcherSort.dir === 'asc' ? '▲' : '▼'"></span>
+                  </th>
+                </template>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="r in filteredPitchers" :key="r.mlbID">
+                <tr>
+                  <td x-text="r.Name"></td>
+                  <td x-text="r.Tm"></td>
+                  <td class="num" x-text="r.Age"></td>
+                  <td x-text="r.role"></td>
+                  <td class="num" x-text="fmt1(r.IP)"></td>
+                  <td class="num" x-text="fmt2(r.FIP_ytd)"></td>
+                  <td class="num" x-text="fmt2(r.ERA_ytd)"></td>
+                  <td class="num" x-text="fmt2(r.pred_fip_prior)"></td>
+                  <td class="num" x-text="fmt2(r.pred_fip_proof)"></td>
+                  <td class="num" x-text="fmt2(r.lo80)"></td>
+                  <td class="num" x-text="fmt2(r.hi80)"></td>
+                  <td class="num" x-text="fmt2(r.era_ros)"></td>
+                  <td class="num" x-text="fmtDelta2(r.delta)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-wrap">
+          <div id="pitchersChart"></div>
+          <p class="caption">
+            ROS ERA = projected FIP + heavily-shrunk personal ERA&ndash;FIP gap,
+            on the current observed run-environment scale.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section x-show="tab === 'about'" x-cloak>
+      <h2>About</h2>
+      <p><strong>What this is.</strong> A public, reproducible mini-projection system
+        (Marcel-style priors + per-component empirical-Bayes updating), built as a
+        research portfolio piece. Everything regenerates with <code>make backtest</code> and
+        <code>make deploy</code> from pinned data snapshots.</p>
+      <p><strong>What the numbers mean.</strong> "ROS wOBA/FIP" is the projected rate for the
+        remainder of the season; the 80% interval is the model's predictive
+        interval assuming the player's current playing-time rate continues. In the
+        2023&ndash;25 walk-forward backtest, 80% intervals covered 80.6% (hitters) /
+        80.5% (pitcher FIP).</p>
+      <p><strong>Known blind spots (by design admission).</strong> No-history players project as
+        league average; injuries, trades, and role changes are invisible; the model
+        slightly over-projects players who stay on the field while declining
+        (+0.004&ndash;0.007 wOBA bias, documented in <code>writeup/spec-audit.md</code>).</p>
+      <p><strong>Not included, on purpose:</strong> WAR (needs defense, baserunning, and
+        replacement-level modeling &mdash; scoped out in the spec audit, item 11).</p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

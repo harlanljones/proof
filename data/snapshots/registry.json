@@ -184,6 +184,11 @@
     "file": "batting_2026-03-01_2026-09-16.parquet",
     "rows": 661
   },
+  "batting_2026-03-01_2026-09-17": {
+    "created_utc": "2026-09-18T18:26:15+00:00",
+    "file": "batting_2026-03-01_2026-09-17.parquet",
+    "rows": 661
+  },
   "fg_guts_v2": {
     "created_utc": "2026-09-18T03:51:53+00:00",
     "file": "fg_guts_v2.parquet",
@@ -382,6 +387,11 @@
   "pitching_2026-03-01_2026-09-16": {
     "created_utc": "2026-09-18T05:47:23+00:00",
     "file": "pitching_2026-03-01_2026-09-16.parquet",
+    "rows": 856
+  },
+  "pitching_2026-03-01_2026-09-17": {
+    "created_utc": "2026-09-18T18:26:24+00:00",
+    "file": "pitching_2026-03-01_2026-09-17.parquet",
     "rows": 856
   },
   "pitchlevel_2023": {

@@ -27,3 +27,11 @@ test:
 # Live dashboard: as-of-yesterday projections (data pinned per day).
 dashboard:
 	uv run streamlit run dashboard.py
+
+# Static site snapshot for Cloudflare Workers assets deployment.
+#   make deploy — regenerate data + push static site to Cloudflare
+prerender:
+	uv run python prerender.py
+
+deploy: prerender
+	npx wrangler deploy

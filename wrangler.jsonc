@@ -1,0 +1,19 @@
+{
+  // PROOF lives at baseball.harlanljones.com/proof/. The root of the domain is
+  // a portfolio hub (site/hub.html) that will index other baseball-analytics
+  // apps as they land. One Worker serves both: static assets under ./dist-site
+  // with the hub at /index.html and the dashboard under /proof/.
+  "name": "proof-mlb",
+  "compatibility_date": "2026-09-18",
+  "observability": {
+    "enabled": true
+  },
+  // Canonical host, attached as a Workers custom domain: deploy provisions DNS,
+  // the certificate, and the route automatically.
+  "routes": [{ "pattern": "baseball.harlanljones.com", "custom_domain": true }],
+  "assets": {
+    "directory": "./dist-site",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  }
+}
