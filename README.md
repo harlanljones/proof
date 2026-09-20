@@ -42,7 +42,12 @@ BF-weighted RMSE, rest-of-season (2023–2025; k_mult=2.0 tuned on 2023–24):
 | **FIP** | 3,473 | 1.218 | 1.028 | **0.990** | 0.971 |
 | **ERA** | 3,400 | 1.910 | 1.467 | **1.431** | 1.378 |
 
-FIP calibration 52.1/80.5/93.9. Two honest findings: (1) the player-specific
+FIP calibration 52.2/80.6/94.0; ERA calibration 51.0/79.6/93.1 after an
+ERA-specific drift term (defense/park/sequencing variance, ~1.0 ERA of sd,
+estimated on 2023-24 training residuals only — the 2025 holdout
+independently implied 1.03; before it the ERA interval, which reused the
+FIP sd, covered just 37.1/64.0/82.5%). Two honest findings: (1) the
+player-specific
 prior beats naive and prior-only clearly on both targets, but *loses to
 league-mean shrinkage* — three-year pitcher history decays fast (injuries,
 arsenal changes, role conversions); the pitcher "players change" drift is
@@ -118,7 +123,8 @@ WAR is deferred because the spec under-specified it.
       for 2027 (historical ones don't exist — audit §1)
 - [x] **M4a** dashboard live: `make dashboard` (hitters/pitchers, risers &
       fallers, 80% intervals; Streamlit, verified headless via AppTest)
-- [ ] **M4b** the write-up prose (scaffold: writeup/methodology.md)
+- [x] **M4b** the write-up prose (writeup/methodology.md — full draft,
+      numbers quoted from writeup/results/)
 
 ## Leakage discipline
 
@@ -134,4 +140,6 @@ WAR is deferred because the spec under-specified it.
 No-history players project as league average; injuries, trades and role
 changes are invisible to the model (a persistent +0.004–0.007 wOBA bias is
 likely injury-related); 2020's 60-game season enters priors with correctly
-reduced weight. Long version: `writeup/spec-audit.md` §15–16.
+reduced weight. Long version: `writeup/spec-audit.md` §15–16. Phase-2 xwOBA blend input
+was spiked and rejected: YTD contact quality adds no ROS-FIP signal beyond
+the event-rate blend (`writeup/spike-xwoba.md`).

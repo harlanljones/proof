@@ -126,8 +126,9 @@ def main() -> None:
         )
         _print(write_all(results, "era", SYSTEMS_P, "BF_ros", "pitchers_era"), "era")
         print(
-            "\nNOTE: ERA intervals use the FIP-scale predictive sd — a lower"
-            " bound that excludes gap/sequencing noise. Descriptive only."
+            "\nNOTE: ERA intervals = FIP interval + defense/sequencing drift"
+            " variance (models.pitchers.SIGMA_ERA_EXTRA2, estimated on"
+            " 2023-24 training residuals only)."
         )
         print("\nWrote writeup/results/pitchers_era_*")
         return

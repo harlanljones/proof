@@ -7,8 +7,11 @@ Mirrors the hitter architecture with three pitcher-specific choices:
     no-history arms use their current-season role.
   * The ERA-FIP gap is a separate, heavily-shrunk component: real for a
     minority of pitchers, but mostly defense/park/sequencing noise.
-  * Aging scales K by f and BB/HR by 1/f (same Marcel constants as hitters;
-    crude — empirical aging curves are phase 2).
+  * Aging scales K by f and BB/HR by 1/f (Marcel constants). A spike
+    scaling f**m found the walk-forward optimum exactly at m=1 on 2023-24
+    and confirmed on the 2025 holdout (m=0 costs ~0.6%): Marcel aging is
+    the empirical optimum here, not a placeholder — see
+    writeup/spike-aging.md.
 
 Regression constant: 600 BF of role-league mean (Marcel-analogous; pitcher
 prior regression has no canonical constant the way 1200 PA does for
@@ -37,6 +40,15 @@ K_GAP = 1200  # ERA-FIP gap is mostly noise: shrink it hard
 # ~0.23 FIP of "pitchers change" sd — over 15x the hitter drift term in
 # scale-adjusted terms, which is the finding, not a nuisance.
 SIGMA_P_EXTRA2 = 0.0517
+
+# ERA-specific extra variance, on top of the FIP interval: defense, park,
+# sequencing, unearned-run luck are invisible to the component model. Same
+# method of moments as SIGMA_P_EXTRA2 — BF-weighted residual^2 minus modeled
+# variance on 2023-2024 training residuals ONLY (2025 untouched): 1.0785.
+# The 2025 holdout independently shows 1.03 (checked after the fact), and
+# FIP residuals show ~0.0005 — i.e. the FIP interval was already calibrated;
+# all of ERA's underconfidence was this missing term. ~1.0 ERA of drift.
+SIGMA_ERA_EXTRA2 = 1.0785
 
 
 def _weighted(prev: list[pd.DataFrame], seasons: list[int]) -> pd.DataFrame:
@@ -205,4 +217,6 @@ def project_pitchers(
     out["pred_era_eb_league"] = out["pred_fip_eb_league"]
 
     out["sd_proof"] = _fip_sd(m, blended, bf_ros, k_mult)
+    # ERA interval = FIP interval + irreducible defense/sequencing variance.
+    out["sd_proof_era"] = np.sqrt(out["sd_proof"] ** 2 + SIGMA_ERA_EXTRA2)
     return out

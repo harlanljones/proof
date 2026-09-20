@@ -51,20 +51,24 @@ ensure_skill_prune() {
     return 0
   fi
   echo "[dev] pruning irrelevant skills from '${PROFILE}' profile..."
-  hermes --profile "$PROFILE" config set skills.disabled "$(build_disabled_list)" >/dev/null 2>&1 || true
+  hermes --profile "$PROFILE" config set skills.disabled "$(build_disabled_list)" >/dev/null
 }
 
 ensure_hooks() {
-  local configured
-  configured="$(hermes --profile "$PROFILE" config get hooks.pre_tool_call 2>/dev/null || true)"
-  if printf '%s' "$configured" | grep -q 'proof-git-guard'; then
-    return 0
-  fi
+  # Configure each hook list only when absent — never clobber hooks the
+  # user added by hand. --force is safe here because the list was empty.
+  local pre post prellm
+  pre="$(hermes --profile "$PROFILE" config get hooks.pre_tool_call 2>/dev/null || true)"
+  post="$(hermes --profile "$PROFILE" config get hooks.post_tool_call 2>/dev/null || true)"
+  prellm="$(hermes --profile "$PROFILE" config get hooks.pre_llm_call 2>/dev/null || true)"
   echo "[dev] registering hook scripts in '${PROFILE}' profile..."
+  [ "$(printf '%s' "$pre" | (grep -c proof- || true))" -gt 0 ] || \
   hermes --profile "$PROFILE" config set hooks.pre_tool_call \
     '[{"matcher":"terminal|execute_code","command":"~/.hermes/agent-hooks/proof-git-guard.sh","timeout":10,"fail_closed":true}]' --force >/dev/null
+  [ "$(printf '%s' "$post" | (grep -c proof- || true))" -gt 0 ] || \
   hermes --profile "$PROFILE" config set hooks.post_tool_call \
     '[{"matcher":"write_file|patch","command":"~/.hermes/agent-hooks/proof-formatter.sh","timeout":15},{"matcher":"terminal","command":"~/.hermes/agent-hooks/proof-evidence.sh","timeout":10}]' --force >/dev/null
+  [ "$(printf '%s' "$prellm" | (grep -c proof- || true))" -gt 0 ] || \
   hermes --profile "$PROFILE" config set hooks.pre_llm_call \
     '[{"command":"~/.hermes/agent-hooks/proof-inject-git-status.sh","timeout":5}]' --force >/dev/null
 }
@@ -80,8 +84,15 @@ ensure_project_skills() {
   mkdir -p .hermes/skills
   local s t
   for s in "${wanted[@]}"; do
+    # A real (non-symlink) directory would trap ln -sfn into nesting the
+    # link inside it; remove that case first.
+    if [ -d ".hermes/skills/$s" ] && [ ! -L ".hermes/skills/$s" ]; then
+      echo "[dev] WARNING: .hermes/skills/$s is a real directory; leaving it alone" >&2
+      continue
+    fi
     [ -e ".hermes/skills/$s/SKILL.md" ] && continue
-    t="$(find -L "$HOME/.hermes/skills" -maxdepth 2 -type d -name "$s" 2>/dev/null | head -1)"
+    # (find | cat | head) absorbs SIGPIPE so pipefail can't abort on 141.
+    t="$(find -L "$HOME/.hermes/skills" -maxdepth 2 -type d -name "$s" 2>/dev/null | cat | head -1 || true)"
     if [ -n "$t" ]; then
       ln -sfn "$t" ".hermes/skills/$s"
       missing=1
@@ -92,7 +103,7 @@ ensure_project_skills() {
   # Repair broken links (skill moved between categories).
   for s in "${wanted[@]}"; do
     if [ -L ".hermes/skills/$s" ] && [ ! -e ".hermes/skills/$s/SKILL.md" ]; then
-      t="$(find -L "$HOME/.hermes/skills" -maxdepth 2 -type d -name "$s" 2>/dev/null | head -1)"
+      t="$(find -L "$HOME/.hermes/skills" -maxdepth 2 -type d -name "$s" 2>/dev/null | cat | head -1 || true)"
       [ -n "$t" ] && ln -sfn "$t" ".hermes/skills/$s"
     fi
   done
@@ -125,9 +136,9 @@ doctor() {
     echo "MISSING: .hermes/skills"; fail=1
   fi
   local count
-  count="$(hermes --profile "$PROFILE" skills trust . 2>&1 | grep -oE '[0-9]+ project skill' | grep -oE '^[0-9]+')"
+  count="$(hermes --profile "$PROFILE" skills trust . 2>&1 | (grep -oE '[0-9]+ project skill' || true) | (grep -oE '^[0-9]+' || true))"
   echo "ok: ${count:-0} project skill(s) load in this repo"
-  hermes --profile "$PROFILE" skills list 2>&1 | grep -c 'disabled' | xargs -I{} echo "ok: {} disabled skill(s) in profile"
+  hermes --profile "$PROFILE" skills list 2>&1 | { grep -c 'disabled' || true; } | xargs -I{} echo "ok: {} disabled skill(s) in profile"
   if hermes --profile "$PROFILE" config get hooks.pre_tool_call 2>/dev/null | grep -q 'git-guard'; then
     echo "ok: git-guard hook configured"
   else

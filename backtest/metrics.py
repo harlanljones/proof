@@ -47,15 +47,23 @@ def error_table(
     return df.sort_values(["season", "rmse"]).reset_index(drop=True)
 
 
+def _sd_col(target: str) -> str:
+    """ERA's predictive interval carries an extra defense/sequencing variance
+    term (models.pitchers.SIGMA_ERA_EXTRA2) — scoring ERA against the FIP sd
+    was the source of its underconfident calibration."""
+    return "sd_proof_era" if target == "era" else "sd_proof"
+
+
 def calibration(
     results: pd.DataFrame, target: str, levels: tuple[float, ...] = (0.5, 0.8, 0.95)
 ) -> pd.DataFrame:
     rows = []
+    sd = results[_sd_col(target)]
     for lv in levels:
         z = stats.norm.ppf((1 + lv) / 2)
         covered = (
             results[f"{target}_actual_ros"] - results[f"pred_{target}_proof"]
-        ).abs() <= z * results["sd_proof"]
+        ).abs() <= z * sd
         rows.append(
             {"nominal": lv, "empirical": float(covered.mean()), "n": len(results)}
         )
@@ -85,7 +93,7 @@ def plot_rmse_by_checkpoint(
 
 def plot_calibration(results: pd.DataFrame, target: str, out: Path) -> None:
     z = (results[f"{target}_actual_ros"] - results[f"pred_{target}_proof"]) / results[
-        "sd_proof"
+        _sd_col(target)
     ]
     fig, ax = plt.subplots(figsize=(6, 6))
     xs = np.linspace(-3.5, 3.5, 200)
