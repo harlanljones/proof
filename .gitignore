@@ -17,3 +17,6 @@ dist-site/
 # Local secrets / runtime state
 .env
 .streamlit/secrets.toml
+
+# Hermes repo-local project skills (per-machine symlinks)
+.hermes/
