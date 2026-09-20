@@ -30,3 +30,4 @@ dev = [
 # "as of yesterday, local" is the product intent for a live dashboard
 "app/projections.py" = ["DTZ011"]
 "dashboard.py" = ["DTZ011"]
+"prerender.py" = ["DTZ011"]

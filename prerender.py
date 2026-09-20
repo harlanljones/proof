@@ -66,7 +66,11 @@ def build_site(out_dir: Path) -> dict:
     (data_dir / "risers_pitchers.json").write_text(
         json.dumps(_risers(pitchers)), encoding="utf-8"
     )
-    return {"hitters": len(hitters), "pitchers": len(pitchers), "as_of": as_of.isoformat()}
+    return {
+        "hitters": len(hitters),
+        "pitchers": len(pitchers),
+        "as_of": as_of.isoformat(),
+    }
 
 
 def main() -> None:
